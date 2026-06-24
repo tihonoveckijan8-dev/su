@@ -3,96 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="description" content="Премиальный инженерный калькулятор с выбором тем оформления">
-    <title>Инженерный калькулятор | Премиум</title>
+    <title>Инженерный калькулятор</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="calculator-container">
         <div class="calculator">
-            <!-- Заголовок и выбор темы -->
+            <!-- Заголовок -->
             <div class="header">
                 <div class="brand">
-                    <span class="brand-icon">⚙️</span>
-                    <span class="brand-text">Engineering Calc</span>
+                    <span class="brand-icon">◈</span>
+                    <span class="brand-text">Calculator Pro</span>
                 </div>
                 <div class="theme-selector">
-                    <button class="theme-btn active" data-theme="dark" title="Темная тема">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" fill="currentColor"/>
-                        </svg>
-                    </button>
-                    <button class="theme-btn" data-theme="light" title="Светлая тема">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <circle cx="10" cy="10" r="4" fill="currentColor"/>
-                            <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.93 4.93l1.41 1.41M13.66 13.66l1.41 1.41M4.93 15.07l1.41-1.41M13.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                    <button class="theme-btn" data-theme="ocean" title="Океаническая тема">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M2 10c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8-8-3.582-8-8z" fill="currentColor" opacity="0.3"/>
-                            <path d="M5 10c0-2.761 2.239-5 5-5s5 2.239 5 5-2.239 5-5 5-5-2.239-5-5z" fill="currentColor" opacity="0.6"/>
-                            <circle cx="10" cy="10" r="2" fill="currentColor"/>
-                        </svg>
-                    </button>
+                    <button class="theme-btn active" data-theme="dark">◉</button>
+                    <button class="theme-btn" data-theme="light">◎</button>
+                    <button class="theme-btn" data-theme="ocean">◉</button>
                 </div>
             </div>
 
             <!-- Дисплей -->
             <div class="display">
+                <div class="display-mode" id="modeDisplay">DEG</div>
                 <div class="display-expression" id="expression"></div>
                 <div class="display-result" id="result">0</div>
-                <div class="display-mode" id="mode">DEG</div>
             </div>
 
             <!-- Кнопки -->
             <div class="buttons-grid">
-                <!-- Ряд 1: Тригонометрия -->
                 <button class="btn btn-function" data-action="sin">sin</button>
                 <button class="btn btn-function" data-action="cos">cos</button>
                 <button class="btn btn-function" data-action="tan">tan</button>
-                <button class="btn btn-function" data-action="mode">DEG</button>
+                <button class="btn btn-function" data-action="mode">RAD</button>
                 <button class="btn btn-function" data-action="pi">π</button>
 
-                <!-- Ряд 2: Логарифмы и степени -->
                 <button class="btn btn-function" data-action="ln">ln</button>
                 <button class="btn btn-function" data-action="log">log</button>
                 <button class="btn btn-function" data-action="sqrt">√</button>
                 <button class="btn btn-function" data-action="pow">xʸ</button>
                 <button class="btn btn-function" data-action="e">e</button>
 
-                <!-- Ряд 3: Дополнительные функции -->
                 <button class="btn btn-function" data-action="fact">!</button>
                 <button class="btn btn-function" data-action="abs">|x|</button>
                 <button class="btn btn-function" data-action="parenOpen">(</button>
                 <button class="btn btn-function" data-action="parenClose">)</button>
                 <button class="btn btn-function" data-action="percent">%</button>
 
-                <!-- Ряд 4: Управление -->
                 <button class="btn btn-special" data-action="clear">AC</button>
                 <button class="btn btn-special" data-action="backspace">⌫</button>
                 <button class="btn btn-special" data-action="square">x²</button>
                 <button class="btn btn-operator" data-action="operator" data-value="/">÷</button>
                 <button class="btn btn-operator" data-action="operator" data-value="*">×</button>
 
-                <!-- Ряд 5: Цифры 7-9 и операции -->
                 <button class="btn btn-number" data-action="digit" data-value="7">7</button>
                 <button class="btn btn-number" data-action="digit" data-value="8">8</button>
                 <button class="btn btn-number" data-action="digit" data-value="9">9</button>
                 <button class="btn btn-operator" data-action="operator" data-value="-">−</button>
                 <button class="btn btn-operator" data-action="operator" data-value="+">+</button>
 
-                <!-- Ряд 6: Цифры 4-6 -->
                 <button class="btn btn-number" data-action="digit" data-value="4">4</button>
                 <button class="btn btn-number" data-action="digit" data-value="5">5</button>
                 <button class="btn btn-number" data-action="digit" data-value="6">6</button>
                 <button class="btn btn-number" data-action="digit" data-value="0">0</button>
-                <button class="btn btn-number" data-action="decimal" data-value=".">.</button>
+                <button class="btn btn-number" data-action="decimal">.</button>
 
-                <!-- Ряд 7: Оставшиеся цифры и равно -->
                 <button class="btn btn-number" data-action="digit" data-value="1">1</button>
                 <button class="btn btn-number" data-action="digit" data-value="2">2</button>
                 <button class="btn btn-number" data-action="digit" data-value="3">3</button>

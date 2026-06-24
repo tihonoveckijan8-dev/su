@@ -1,315 +1,299 @@
-// ===== Состояние калькулятора =====
-const state = {
-    expression: '',
-    result: '0',
-    isResultShown: false,
-    mode: 'deg'
-};
+(function() {
+  'use strict';
 
-// ===== DOM элементы =====
-const displayExpression = document.getElementById('expression');
-const displayResult = document.getElementById('result');
-const modeDisplay = document.getElementById('modeDisplay');
+  // ----- Состояние калькулятора -----
+  const state = {
+    currentOperand: '0',
+    previousOperand: '',
+    operation: null,
+    shouldResetScreen: false,
+    lastResult: null
+  };
 
-// ===== Обновление дисплея =====
-function updateDisplay() {
-    displayExpression.textContent = state.expression || '';
-    displayResult.textContent = state.result || '0';
-}
+  // ----- DOM элементы -----
+  const currentOperandEl = document.getElementById('current-operand');
+  const previousOperandEl = document.getElementById('previous-operand');
+  const clearBtn = document.getElementById('clear-btn');
 
-// ===== Функция факториала =====
-function factorial(n) {
-    if (n < 0) return Infinity;
-    if (n === 0 || n === 1) return 1;
-    let result = 1;
-    for (let i = 2; i <= n; i++) {
-        result *= i;
-    }
-    return result;
-}
-
-// ===== Вычисление выражения =====
-function calculate(expr) {
-    try {
-        // Заменяем символы на JavaScript операторы
-        let processed = expr
-            .replace(/π/g, Math.PI)
-            .replace(/e(?![xp])/g, Math.E)
-            .replace(/×/g, '*')
-            .replace(/÷/g, '/')
-            .replace(/−/g, '-')
-            .replace(/x²/g, '**2')
-            .replace(/xʸ/g, '**')
-            .replace(/%/g, '/100');
-
-        // Обработка функций
-        // Сначала обрабатываем тригонометрические функции
-        if (state.mode === 'deg') {
-            processed = processed.replace(/sin\(/g, 'Math.sin(DEG2RAD(');
-            processed = processed.replace(/cos\(/g, 'Math.cos(DEG2RAD(');
-            processed = processed.replace(/tan\(/g, 'Math.tan(DEG2RAD(');
-        } else {
-            processed = processed.replace(/sin\(/g, 'Math.sin(');
-            processed = processed.replace(/cos\(/g, 'Math.cos(');
-            processed = processed.replace(/tan\(/g, 'Math.tan(');
-        }
-
-        processed = processed
-            .replace(/ln\(/g, 'Math.log(')
-            .replace(/log\(/g, 'Math.log10(')
-            .replace(/√\(/g, 'Math.sqrt(')
-            .replace(/abs\(/g, 'Math.abs(')
-            .replace(/fact\(/g, 'factorial(');
-
-        // Добавляем функцию преобразования градусов в радианы
-        const DEG2RAD = (x) => x * Math.PI / 180;
-
-        // Вычисляем
-        const result = Function('DEG2RAD', 'factorial', `return (${processed})`)(DEG2RAD, factorial);
-        
-        if (!isFinite(result)) return 'Ошибка';
-        if (Number.isInteger(result)) return String(result);
-        return String(parseFloat(result.toFixed(10)));
-    } catch (error) {
-        return 'Ошибка';
-    }
-}
-
-// ===== Обработчики кнопок =====
-document.querySelectorAll('.btn').forEach(button => {
-    button.addEventListener('click', function(e) {
-        const action = this.dataset.action;
-        const value = this.dataset.value;
-
-        switch (action) {
-            case 'digit':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += value;
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'decimal':
-                if (state.isResultShown) {
-                    state.expression = '0';
-                    state.isResultShown = false;
-                }
-                // Проверяем, есть ли уже точка в последнем числе
-                const parts = state.expression.split(/[\+\-\*\/\(\)]/);
-                const lastPart = parts[parts.length - 1];
-                if (!lastPart.includes('.')) {
-                    state.expression += '.';
-                    state.result = state.expression;
-                    updateDisplay();
-                }
-                break;
-
-            case 'operator':
-                if (state.isResultShown) {
-                    state.expression = state.result + value;
-                    state.isResultShown = false;
-                } else {
-                    state.expression += value;
-                }
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'equals':
-                if (state.expression) {
-                    const result = calculate(state.expression);
-                    state.expression = state.expression + ' =';
-                    state.result = result;
-                    state.isResultShown = true;
-                    updateDisplay();
-                }
-                break;
-
-            case 'clear':
-                state.expression = '';
-                state.result = '0';
-                state.isResultShown = false;
-                updateDisplay();
-                break;
-
-            case 'backspace':
-                if (!state.isResultShown && state.expression.length > 0) {
-                    state.expression = state.expression.slice(0, -1);
-                    state.result = state.expression || '0';
-                    updateDisplay();
-                }
-                break;
-
-            case 'negate':
-                if (state.isResultShown) {
-                    state.expression = String(-parseFloat(state.result));
-                    state.result = state.expression;
-                    state.isResultShown = false;
-                } else if (state.expression) {
-                    // Инвертируем последнее число
-                    const match = state.expression.match(/([\+\-\*\/\(]?)([0-9.]+)$/);
-                    if (match) {
-                        const prefix = match[1] || '';
-                        const number = match[2];
-                        const newNumber = String(-parseFloat(number));
-                        state.expression = state.expression.slice(0, -number.length) + newNumber;
-                        state.result = state.expression;
-                        updateDisplay();
-                    }
-                }
-                break;
-
-            case 'mode':
-                state.mode = state.mode === 'deg' ? 'rad' : 'deg';
-                modeDisplay.textContent = state.mode.toUpperCase();
-                // Меняем текст кнопки
-                this.textContent = state.mode.toUpperCase();
-                break;
-
-            case 'pi':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += 'π';
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'e':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += 'e';
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'sin':
-            case 'cos':
-            case 'tan':
-            case 'ln':
-            case 'log':
-            case 'sqrt':
-            case 'fact':
-            case 'abs':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += action + '(';
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'pow':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += 'xʸ';
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'square':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += 'x²';
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'percent':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += '%';
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'parenOpen':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += '(';
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            case 'parenClose':
-                if (state.isResultShown) {
-                    state.expression = '';
-                    state.isResultShown = false;
-                }
-                state.expression += ')';
-                state.result = state.expression;
-                updateDisplay();
-                break;
-
-            default:
-                break;
-        }
-    });
-});
-
-// ===== Переключение тем =====
-document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        const theme = this.dataset.theme;
-        document.documentElement.setAttribute('data-theme', theme);
-    });
-});
-
-// ===== Поддержка клавиатуры =====
-document.addEventListener('keydown', function(e) {
-    const key = e.key;
+  // ----- Утилиты -----
+  function updateDisplay() {
+    currentOperandEl.textContent = state.currentOperand;
     
-    if (key >= '0' && key <= '9') {
-        document.querySelector(`[data-action="digit"][data-value="${key}"]`)?.click();
-    } else if (key === '.') {
-        document.querySelector('[data-action="decimal"]')?.click();
-    } else if (key === 'Enter' || key === '=') {
-        e.preventDefault();
-        document.querySelector('[data-action="equals"]')?.click();
-    } else if (key === 'Backspace') {
-        e.preventDefault();
-        document.querySelector('[data-action="backspace"]')?.click();
-    } else if (key === 'Escape' || key === 'c' || key === 'C') {
-        document.querySelector('[data-action="clear"]')?.click();
-    } else if (key === '+') {
-        document.querySelector('[data-action="operator"][data-value="+"]')?.click();
-    } else if (key === '-') {
-        document.querySelector('[data-action="operator"][data-value="-"]')?.click();
-    } else if (key === '*') {
-        document.querySelector('[data-action="operator"][data-value="*"]')?.click();
-    } else if (key === '/') {
-        document.querySelector('[data-action="operator"][data-value="/"]')?.click();
-    } else if (key === '(') {
-        document.querySelector('[data-action="parenOpen"]')?.click();
-    } else if (key === ')') {
-        document.querySelector('[data-action="parenClose"]')?.click();
-    } else if (key === '%') {
-        document.querySelector('[data-action="percent"]')?.click();
+    if (state.operation && state.previousOperand !== '') {
+      previousOperandEl.textContent = `${state.previousOperand} ${state.operation}`;
+    } else if (state.previousOperand && !state.operation) {
+      previousOperandEl.textContent = state.previousOperand;
+    } else {
+      previousOperandEl.textContent = '';
     }
-});
 
-// ===== Инициализация =====
-updateDisplay();
-modeDisplay.textContent = 'DEG';
+    // Меняем текст AC/C в зависимости от состояния
+    if (state.currentOperand !== '0' || state.previousOperand !== '' || state.operation) {
+      clearBtn.textContent = 'C';
+    } else {
+      clearBtn.textContent = 'AC';
+    }
+  }
 
-// Фикс для кнопки RAD
-document.querySelector('[data-action="mode"]').textContent = 'RAD';
+  function formatOperand(value) {
+    if (value === '' || value === '.') return '0';
+    // Ограничим длину, чтобы не вылезало за экран
+    if (value.length > 12) {
+      return parseFloat(value).toExponential(5);
+    }
+    return value;
+  }
 
-console.log('Калькулятор загружен!');
+  // ----- Основные операции -----
+  function clearAll() {
+    state.currentOperand = '0';
+    state.previousOperand = '';
+    state.operation = null;
+    state.shouldResetScreen = false;
+    state.lastResult = null;
+  }
+
+  function clearEntry() {
+    state.currentOperand = '0';
+    state.shouldResetScreen = false;
+  }
+
+  function appendNumber(number) {
+    if (state.shouldResetScreen) {
+      state.currentOperand = '';
+      state.shouldResetScreen = false;
+    }
+    
+    // Не даём вводить больше одной точки
+    if (number === '.' && state.currentOperand.includes('.')) return;
+    
+    // Ограничение на длину (без точки)
+    if (state.currentOperand.replace('.', '').length >= 12) return;
+
+    if (state.currentOperand === '0' && number !== '.') {
+      state.currentOperand = number;
+    } else {
+      state.currentOperand += number;
+    }
+  }
+
+  function toggleSign() {
+    if (state.currentOperand === '0') return;
+    if (state.currentOperand.startsWith('-')) {
+      state.currentOperand = state.currentOperand.slice(1);
+    } else {
+      state.currentOperand = '-' + state.currentOperand;
+    }
+  }
+
+  function percent() {
+    if (state.currentOperand === '0') return;
+    const num = parseFloat(state.currentOperand);
+    if (isNaN(num)) return;
+    state.currentOperand = (num / 100).toString();
+    // Убираем лишние нули после точки
+    if (state.currentOperand.includes('.')) {
+      state.currentOperand = parseFloat(state.currentOperand).toString();
+    }
+  }
+
+  function chooseOperation(op) {
+    if (state.currentOperand === '' && state.previousOperand === '') return;
+    
+    if (state.previousOperand !== '' && state.operation && !state.shouldResetScreen) {
+      compute();
+    }
+
+    state.operation = op;
+    state.previousOperand = state.currentOperand;
+    state.shouldResetScreen = true;
+  }
+
+  function compute() {
+    const prev = parseFloat(state.previousOperand);
+    const current = parseFloat(state.currentOperand);
+    
+    if (isNaN(prev) || isNaN(current)) return;
+    
+    let result;
+    switch (state.operation) {
+      case '+':
+        result = prev + current;
+        break;
+      case '−':
+        result = prev - current;
+        break;
+      case '×':
+        result = prev * current;
+        break;
+      case '÷':
+        if (current === 0) {
+          alert('Деление на ноль невозможно');
+          clearAll();
+          updateDisplay();
+          return;
+        }
+        result = prev / current;
+        break;
+      default:
+        return;
+    }
+
+    // Округляем результат, чтобы избежать проблем с плавающей точкой
+    result = Math.round((result + Number.EPSILON) * 100000000) / 100000000;
+    
+    state.currentOperand = result.toString();
+    state.operation = null;
+    state.previousOperand = '';
+    state.shouldResetScreen = true;
+    state.lastResult = result;
+  }
+
+  function handleEquals() {
+    if (!state.operation || state.shouldResetScreen) {
+      // Если нет операции, но было previous, возможно повторное равно
+      if (state.previousOperand && state.lastResult !== null && !state.operation) {
+        // Повтор последней операции? Не реализуем сложную логику, просто ничего.
+      }
+      return;
+    }
+    compute();
+  }
+
+  // ----- Обработчики событий кнопок -----
+  function handleButtonClick(e) {
+    const button = e.target.closest('button');
+    if (!button) return;
+    
+    const action = button.dataset.action;
+    
+    // Анимация нажатия (тактильная)
+    button.style.transform = 'scale(0.92)';
+    setTimeout(() => {
+      button.style.transform = '';
+    }, 100);
+
+    if (action === 'number') {
+      const value = button.dataset.value;
+      appendNumber(value);
+    } else if (action === 'decimal') {
+      appendNumber('.');
+    } else if (action === 'clear') {
+      if (state.currentOperand !== '0' || state.previousOperand !== '' || state.operation) {
+        clearEntry();
+      } else {
+        clearAll();
+      }
+    } else if (action === 'sign') {
+      toggleSign();
+    } else if (action === 'percent') {
+      percent();
+    } else if (action === 'operation') {
+      const op = button.dataset.value;
+      chooseOperation(op);
+    } else if (action === 'equals') {
+      handleEquals();
+    }
+    
+    updateDisplay();
+  }
+
+  // ----- Смена темы -----
+  function switchTheme(theme) {
+    document.body.className = ''; // сброс
+    if (theme === 'dark') {
+      document.body.classList.add('theme-dark');
+    } else if (theme === 'rose') {
+      document.body.classList.add('theme-rose');
+    } else {
+      document.body.classList.add('theme-default');
+    }
+    
+    // Обновляем активную точку
+    document.querySelectorAll('.theme-dot').forEach(dot => {
+      dot.classList.remove('active');
+      if (dot.dataset.theme === theme) {
+        dot.classList.add('active');
+      }
+    });
+
+    // Сохраняем предпочтение
+    localStorage.setItem('calculatorTheme', theme);
+  }
+
+  // ----- Инициализация -----
+  function init() {
+    // Вешаем обработчик на весь калькулятор (делегирование)
+    const calculatorElement = document.querySelector('.calculator');
+    calculatorElement.addEventListener('click', handleButtonClick);
+
+    // Поддержка клавиатуры
+    window.addEventListener('keydown', (e) => {
+      const key = e.key;
+      // Цифры и точка
+      if ((key >= '0' && key <= '9') || key === '.') {
+        e.preventDefault();
+        if (key === '.') {
+          appendNumber('.');
+        } else {
+          appendNumber(key);
+        }
+        updateDisplay();
+      }
+      // Операторы
+      if (key === '+' || key === '-' || key === '*' || key === '/') {
+        e.preventDefault();
+        let op = key;
+        if (key === '*') op = '×';
+        if (key === '/') op = '÷';
+        if (key === '-') op = '−';
+        chooseOperation(op);
+        updateDisplay();
+      }
+      // Enter или равно
+      if (key === 'Enter' || key === '=') {
+        e.preventDefault();
+        handleEquals();
+        updateDisplay();
+      }
+      // Backspace
+      if (key === 'Backspace') {
+        e.preventDefault();
+        if (state.shouldResetScreen) {
+          clearAll();
+        } else {
+          if (state.currentOperand.length > 1) {
+            state.currentOperand = state.currentOperand.slice(0, -1);
+          } else {
+            state.currentOperand = '0';
+          }
+        }
+        updateDisplay();
+      }
+      // Escape (очистка)
+      if (key === 'Escape') {
+        e.preventDefault();
+        clearAll();
+        updateDisplay();
+      }
+    });
+
+    // Обработчики точек темы
+    document.querySelectorAll('.theme-dot').forEach(dot => {
+      dot.addEventListener('click', (e) => {
+        const theme = e.currentTarget.dataset.theme;
+        switchTheme(theme);
+      });
+    });
+
+    // Загрузка сохранённой темы
+    const savedTheme = localStorage.getItem('calculatorTheme') || 'default';
+    switchTheme(savedTheme);
+    
+    // Начальное отображение
+    updateDisplay();
+  }
+
+  // Старт
+  init();
+})();

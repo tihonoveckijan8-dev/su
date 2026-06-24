@@ -3,9 +3,7 @@ const state = {
     expression: '',
     result: '0',
     isResultShown: false,
-    mode: 'deg', // 'deg' или 'rad'
-    lastOperator: null,
-    memory: null
+    mode: 'deg'
 };
 
 // ===== DOM элементы =====
@@ -13,73 +11,67 @@ const displayExpression = document.getElementById('expression');
 const displayResult = document.getElementById('result');
 const modeDisplay = document.getElementById('modeDisplay');
 
-// ===== Функции =====
+// ===== Обновление дисплея =====
 function updateDisplay() {
     displayExpression.textContent = state.expression || '';
     displayResult.textContent = state.result || '0';
 }
 
-function appendToExpression(value) {
-    if (state.isResultShown) {
-        // Если показан результат, начинаем новое выражение
-        state.expression = '';
-        state.isResultShown = false;
+// ===== Функция факториала =====
+function factorial(n) {
+    if (n < 0) return Infinity;
+    if (n === 0 || n === 1) return 1;
+    let result = 1;
+    for (let i = 2; i <= n; i++) {
+        result *= i;
     }
-    state.expression += value;
-    state.result = state.expression;
-    updateDisplay();
+    return result;
 }
 
-function evaluateExpression() {
+// ===== Вычисление выражения =====
+function calculate(expr) {
     try {
-        // Подготовка выражения для вычисления
-        let expr = state.expression
-            .replace(/π/g, `(${Math.PI})`)
-            .replace(/e/g, `(${Math.E})`)
-            .replace(/sin\(/g, `Math.sin(${state.mode === 'deg' ? '' : ''}`)
-            .replace(/cos\(/g, `Math.cos(${state.mode === 'deg' ? '' : ''}`)
-            .replace(/tan\(/g, `Math.tan(${state.mode === 'deg' ? '' : ''}`)
-            .replace(/ln\(/g, `Math.log(`)
-            .replace(/log\(/g, `Math.log10(`)
-            .replace(/√\(/g, `Math.sqrt(`)
-            .replace(/fact\(/g, `factorial(`)
-            .replace(/abs\(/g, `Math.abs(`)
-            .replace(/x²/g, `**2`)
-            .replace(/xʸ/g, `**`)
-            .replace(/×/g, `*`)
-            .replace(/÷/g, `/`)
-            .replace(/−/g, `-`);
+        // Заменяем символы на JavaScript операторы
+        let processed = expr
+            .replace(/π/g, Math.PI)
+            .replace(/e(?![xp])/g, Math.E)
+            .replace(/×/g, '*')
+            .replace(/÷/g, '/')
+            .replace(/−/g, '-')
+            .replace(/x²/g, '**2')
+            .replace(/xʸ/g, '**')
+            .replace(/%/g, '/100');
 
-        // Обработка процентов
-        expr = expr.replace(/%/g, `/100`);
-
-        // Дополнительная обработка для тригонометрических функций в градусах
+        // Обработка функций
+        // Сначала обрабатываем тригонометрические функции
         if (state.mode === 'deg') {
-            expr = expr.replace(/Math\.sin\(/g, `Math.sin(${Math.PI}/180*`);
-            expr = expr.replace(/Math\.cos\(/g, `Math.cos(${Math.PI}/180*`);
-            expr = expr.replace(/Math\.tan\(/g, `Math.tan(${Math.PI}/180*`);
+            processed = processed.replace(/sin\(/g, 'Math.sin(DEG2RAD(');
+            processed = processed.replace(/cos\(/g, 'Math.cos(DEG2RAD(');
+            processed = processed.replace(/tan\(/g, 'Math.tan(DEG2RAD(');
+        } else {
+            processed = processed.replace(/sin\(/g, 'Math.sin(');
+            processed = processed.replace(/cos\(/g, 'Math.cos(');
+            processed = processed.replace(/tan\(/g, 'Math.tan(');
         }
 
-        // Функция факториала
-        window.factorial = function(n) {
-            if (n < 0) return Infinity;
-            if (n === 0 || n === 1) return 1;
-            let result = 1;
-            for (let i = 2; i <= n; i++) {
-                result *= i;
-            }
-            return result;
-        };
+        processed = processed
+            .replace(/ln\(/g, 'Math.log(')
+            .replace(/log\(/g, 'Math.log10(')
+            .replace(/√\(/g, 'Math.sqrt(')
+            .replace(/abs\(/g, 'Math.abs(')
+            .replace(/fact\(/g, 'factorial(');
 
-        // Вычисление
-        const result = Function('"use strict"; return (' + expr + ')')();
-        state.result = String(Number.isFinite(result) ? result : 'Ошибка');
-        state.isResultShown = true;
-        state.expression = state.expression + ' =';
-        updateDisplay();
+        // Добавляем функцию преобразования градусов в радианы
+        const DEG2RAD = (x) => x * Math.PI / 180;
+
+        // Вычисляем
+        const result = Function('DEG2RAD', 'factorial', `return (${processed})`)(DEG2RAD, factorial);
+        
+        if (!isFinite(result)) return 'Ошибка';
+        if (Number.isInteger(result)) return String(result);
+        return String(parseFloat(result.toFixed(10)));
     } catch (error) {
-        state.result = 'Ошибка';
-        updateDisplay();
+        return 'Ошибка';
     }
 }
 
@@ -105,9 +97,10 @@ document.querySelectorAll('.btn').forEach(button => {
                     state.expression = '0';
                     state.isResultShown = false;
                 }
-                // Проверка, есть ли уже точка в последнем числе
-                const lastNumber = state.expression.split(/[\+\-\*\/\(\)]/).pop();
-                if (!lastNumber.includes('.')) {
+                // Проверяем, есть ли уже точка в последнем числе
+                const parts = state.expression.split(/[\+\-\*\/\(\)]/);
+                const lastPart = parts[parts.length - 1];
+                if (!lastPart.includes('.')) {
                     state.expression += '.';
                     state.result = state.expression;
                     updateDisplay();
@@ -126,7 +119,13 @@ document.querySelectorAll('.btn').forEach(button => {
                 break;
 
             case 'equals':
-                evaluateExpression();
+                if (state.expression) {
+                    const result = calculate(state.expression);
+                    state.expression = state.expression + ' =';
+                    state.result = result;
+                    state.isResultShown = true;
+                    updateDisplay();
+                }
                 break;
 
             case 'clear':
@@ -137,7 +136,7 @@ document.querySelectorAll('.btn').forEach(button => {
                 break;
 
             case 'backspace':
-                if (!state.isResultShown) {
+                if (!state.isResultShown && state.expression.length > 0) {
                     state.expression = state.expression.slice(0, -1);
                     state.result = state.expression || '0';
                     updateDisplay();
@@ -150,10 +149,11 @@ document.querySelectorAll('.btn').forEach(button => {
                     state.result = state.expression;
                     state.isResultShown = false;
                 } else if (state.expression) {
-                    // Инвертирование знака последнего числа
-                    const match = state.expression.match(/([\+\-\*\/]?)([0-9.]+)$/);
+                    // Инвертируем последнее число
+                    const match = state.expression.match(/([\+\-\*\/\(]?)([0-9.]+)$/);
                     if (match) {
-                        const [_, operator, number] = match;
+                        const prefix = match[1] || '';
+                        const number = match[2];
                         const newNumber = String(-parseFloat(number));
                         state.expression = state.expression.slice(0, -number.length) + newNumber;
                         state.result = state.expression;
@@ -165,14 +165,28 @@ document.querySelectorAll('.btn').forEach(button => {
             case 'mode':
                 state.mode = state.mode === 'deg' ? 'rad' : 'deg';
                 modeDisplay.textContent = state.mode.toUpperCase();
+                // Меняем текст кнопки
+                this.textContent = state.mode.toUpperCase();
                 break;
 
             case 'pi':
-                appendToExpression('π');
+                if (state.isResultShown) {
+                    state.expression = '';
+                    state.isResultShown = false;
+                }
+                state.expression += 'π';
+                state.result = state.expression;
+                updateDisplay();
                 break;
 
             case 'e':
-                appendToExpression('e');
+                if (state.isResultShown) {
+                    state.expression = '';
+                    state.isResultShown = false;
+                }
+                state.expression += 'e';
+                state.result = state.expression;
+                updateDisplay();
                 break;
 
             case 'sin':
@@ -183,27 +197,63 @@ document.querySelectorAll('.btn').forEach(button => {
             case 'sqrt':
             case 'fact':
             case 'abs':
-                appendToExpression(action + '(');
+                if (state.isResultShown) {
+                    state.expression = '';
+                    state.isResultShown = false;
+                }
+                state.expression += action + '(';
+                state.result = state.expression;
+                updateDisplay();
                 break;
 
             case 'pow':
-                appendToExpression('xʸ');
+                if (state.isResultShown) {
+                    state.expression = '';
+                    state.isResultShown = false;
+                }
+                state.expression += 'xʸ';
+                state.result = state.expression;
+                updateDisplay();
                 break;
 
             case 'square':
-                appendToExpression('x²');
+                if (state.isResultShown) {
+                    state.expression = '';
+                    state.isResultShown = false;
+                }
+                state.expression += 'x²';
+                state.result = state.expression;
+                updateDisplay();
                 break;
 
             case 'percent':
-                appendToExpression('%');
+                if (state.isResultShown) {
+                    state.expression = '';
+                    state.isResultShown = false;
+                }
+                state.expression += '%';
+                state.result = state.expression;
+                updateDisplay();
                 break;
 
             case 'parenOpen':
-                appendToExpression('(');
+                if (state.isResultShown) {
+                    state.expression = '';
+                    state.isResultShown = false;
+                }
+                state.expression += '(';
+                state.result = state.expression;
+                updateDisplay();
                 break;
 
             case 'parenClose':
-                appendToExpression(')');
+                if (state.isResultShown) {
+                    state.expression = '';
+                    state.isResultShown = false;
+                }
+                state.expression += ')';
+                state.result = state.expression;
+                updateDisplay();
                 break;
 
             default:
@@ -217,22 +267,12 @@ document.querySelectorAll('.theme-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        
         const theme = this.dataset.theme;
         document.documentElement.setAttribute('data-theme', theme);
-        
-        // Обновляем иконку для светлой темы
-        if (theme === 'light') {
-            this.textContent = '◉';
-        } else if (theme === 'dark') {
-            this.textContent = '◉';
-        } else if (theme === 'ocean') {
-            this.textContent = '◉';
-        }
     });
 });
 
-// ===== Клавиатура =====
+// ===== Поддержка клавиатуры =====
 document.addEventListener('keydown', function(e) {
     const key = e.key;
     
@@ -244,6 +284,7 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
         document.querySelector('[data-action="equals"]')?.click();
     } else if (key === 'Backspace') {
+        e.preventDefault();
         document.querySelector('[data-action="backspace"]')?.click();
     } else if (key === 'Escape' || key === 'c' || key === 'C') {
         document.querySelector('[data-action="clear"]')?.click();
@@ -267,3 +308,8 @@ document.addEventListener('keydown', function(e) {
 // ===== Инициализация =====
 updateDisplay();
 modeDisplay.textContent = 'DEG';
+
+// Фикс для кнопки RAD
+document.querySelector('[data-action="mode"]').textContent = 'RAD';
+
+console.log('Калькулятор загружен!');
